@@ -59,18 +59,12 @@ def get_features(image, x, y, feature_width, scales=None):
             These are the computed features.
     """
     assert image.ndim == 2, 'Image must be grayscale'
-    #############################################################################
-    # TODO: YOUR CODE HERE                                                      #
-    # If you choose to implement rotation invariance, enabling it should not    #
-    # decrease your matching accuracy.                                          #
-    #############################################################################
 
     padded_image = pad_image(image, feature_width)
     coordinates = yx_coordinates(y, x, feature_width)
-    patches = get_local_patches(padded_image, coordinates, feature_width)
+    fvs = get_local_patches(padded_image, coordinates, feature_width)
 
-    fv = 'baller'
-    return fv
+    return fvs
 
 def pad_image(image, feature_width):
     # returns padded image copy allowing feature detection near edges
@@ -84,6 +78,16 @@ def pad_image(image, feature_width):
 def get_pad_size(feature_width):
     assert feature_width % 2 == 0, 'feature width must be even'
     return math.trunc(feature_width / 2)
+
+def yx_coordinates(y_vals, x_vals, feature_width):
+    # buffer values and return (y, x)
+    assert len(y_vals) == len(x_vals), 'y and x location values must be balanced'
+
+    flat_y_vals = y_vals.flatten()
+    flat_x_vals = x_vals.flatten()
+
+    pad_size = get_pad_size(feature_width)
+    return [(int(round(flat_y_vals[index]) + pad_size), int(round(x_val) + pad_size)) for index, x_val in enumerate(flat_x_vals)]
 
 def get_local_patches(padded_image, pixel_coordinates, feature_width):
     patches = []
@@ -101,13 +105,3 @@ def get_patch_bounds(y_val, x_val, feature_width):
     y_bounds = (y_val - entry_buffer, y_val + exit_buffer)
     x_bounds = (x_val - entry_buffer, x_val + exit_buffer)
     return y_bounds, x_bounds
-
-def yx_coordinates(y_vals, x_vals, feature_width):
-    # buffer values and return (y, x)
-    assert len(y_vals) == len(x_vals), 'y and x location values must be balanced'
-
-    flat_y_vals = y_vals.flatten()
-    flat_x_vals = x_vals.flatten()
-
-    pad_size = get_pad_size(feature_width)
-    return [(int(round(flat_y_vals[index]) + pad_size), int(round(x_val) + pad_size)) for index, x_val in enumerate(flat_x_vals)]
