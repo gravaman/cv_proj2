@@ -79,7 +79,11 @@ def feature_distances(features):
     # add to get symmetrical distance matrix
     return upper_triangle + lower_triangle
 
-
+def sorted_neighbors(distance_arr):
+    # returns matrix of neighbor indices sorted by euclidean distance (ascending)
+    # col1 is the sorted feature index (distance == 0)
+    neighbor_ranks = [np.argsort(row) for row in distance_arr]
+    return np.array(neighbor_ranks)
 
 def get_distance_row(features, dim, dimensionality):
     # returns (k,) array with leading zeros
