@@ -67,7 +67,19 @@ def feature_distances(features):
     distances = np.zeros((dimensionality, dimensionality))
 
     rows = [get_distance_row(features, dim, dimensionality) for dim in np.arange(dimensionality-1)]
-    return np.array(rows)
+    upper_triangle = np.array(rows)
+
+    # reflect upper triangle along diagonal
+    # transpose upper to get lower
+    lower_triangle = np.transpose(upper_triangle)
+
+    # zero out the diagonal to prevent double counting
+    lower_triangle = np.tril(lower_triangle, k=-1)
+
+    # add to get symmetrical distance matrix
+    return upper_triangle + lower_triangle
+
+
 
 def get_distance_row(features, dim, dimensionality):
     # returns (k,) array with leading zeros
