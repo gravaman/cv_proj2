@@ -34,13 +34,13 @@ def match_features(features1, features2, x1, y1, x2, y2):
 
     'matches' and 'confidences' can be empty e.g. (0x2) and (0x1)
     """
-    # return kx2 array of matches where col1 contains features1 indices and col2 contains features2 indices
-    # get random match count less than min of features1 and features2 count
     matches = random_features(features1, features2)
     confidences = np.empty([0,1])
 
-    # get k pairs of random indices, where k less than min features count
-    # stack k pairs and return kx2 array
+
+    # calculate euclidean distance of all 16x16 dimensions of each feature with each other feature
+    # find ratio of feature's distance to nearest and next nearest neighbor (confidence)
+    # return only the top 100 most confident matches
 
     return matches, confidences
 
@@ -62,5 +62,41 @@ def random_features(features1, features2):
 
     return rando_arr
 
-def select_random_indices(features, k):
-    return random.sample
+def feature_distances(features):
+    dimensionality = len(features)
+    distances = np.zeros((dimensionality, dimensionality))
+
+    rows = [get_distance_row(features, dim, dimensionality) for dim in np.arange(dimensionality-1)]
+    upper_triangle = np.array(rows)
+
+    # reflect upper triangle along diagonal
+    # transpose upper to get lower
+    lower_triangle = np.transpose(upper_triangle)
+
+    # zero out the diagonal to prevent double counting
+    lower_triangle = np.tril(lower_triangle, k=-1)
+
+    # add to get symmetrical distance matrix
+    return upper_triangle + lower_triangle
+
+
+def get_distance_row(features, dim, dimensionality):
+    # returns (k,) array with leading zeros
+    # get fwd range
+    fwd_indices = np.arange(dim + 1, dimensionality)
+
+    # leading zeros
+    entry_distances = np.zeros(dimension)
+
+    # get distance from current dimension for each fwd index
+    current_feature = features[dim]
+    fwd_distances = [euclidean_distance(current_feature, features[fwd_index]) for fwd_index in fwd_indices]
+
+    return np.concatenate((entry_distances, fwd_distances), axis=None)
+
+def euclidean_distance(fv1, fv2):
+    # sum of element wise square root of squared difference
+    # returns floating point scalar
+    sqr = np.square(fv1 - fv2)
+    sqrt = np.sqrt(sqr)
+    return np.sum(sqrt)
