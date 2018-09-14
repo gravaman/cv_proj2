@@ -1,5 +1,5 @@
 import numpy as np
-
+import random
 
 def match_features(features1, features2, x1, y1, x2, y2):
     """
@@ -34,14 +34,33 @@ def match_features(features1, features2, x1, y1, x2, y2):
 
     'matches' and 'confidences' can be empty e.g. (0x2) and (0x1)
     """
-    #############################################################################
-    # TODO: YOUR CODE HERE                                                        #
-    #############################################################################
+    # return kx2 array of matches where col1 contains features1 indices and col2 contains features2 indices
+    # get random match count less than min of features1 and features2 count
+    matches = random_features(features1, features2)
+    confidences = np.empty([0,1])
 
-    raise NotImplementedError('`match_features` function in ' +
-        '`student_feature_matching.py` needs to be implemented')
+    # get k pairs of random indices, where k less than min features count
+    # stack k pairs and return kx2 array
 
-    #############################################################################
-    #                             END OF YOUR CODE                              #
-    #############################################################################
     return matches, confidences
+
+def random_features(features1, features2):
+    max_k = min(len(features1), len(features2))
+    k = random.randrange(1, max_k)
+
+    f1_indices = range(len(features1))
+    f2_indices = range(len(features2))
+
+    random1 = random.sample(f1_indices, k)
+    random2 = random.sample(f2_indices, k)
+
+    # create array, transpose, concatenate
+    rando_arr = np.array([random1, random2])
+    rando_arr = np.transpose(rando_arr)
+
+    assert rando_arr.shape == (k, 2), 'random feature matches must be shape (k, 2)'
+
+    return rando_arr
+
+def select_random_indices(features, k):
+    return random.sample
