@@ -1,7 +1,6 @@
 import numpy as np
 import cv2
 import math
-import pdb
 
 def get_features(image, x, y, feature_width, scales=None):
     """
@@ -94,7 +93,6 @@ def xy_coordinates(x_vals, y_vals, pad_size=0):
     y_vals_round = [int(round(y_val)) for y_val in flat_y_vals]
 
     return (x_vals_round, y_vals_round)
-    # return [(int(round(x_val) + pad_size), int(round(flat_y_vals[index]) + pad_size)) for index, x_val in enumerate(flat_x_vals)]
 
 def get_local_patches(padded_image, pixel_coordinates, feature_width):
     patches = []
@@ -103,14 +101,14 @@ def get_local_patches(padded_image, pixel_coordinates, feature_width):
         y_val = y_coords[i]
         (y_entry, y_exit), (x_entry, x_exit) = get_patch_bounds(y_val, x_val, feature_width) # numpy row, col order
         patch = padded_image[y_entry:y_exit, x_entry:x_exit] # numpy row, col order
+
         norm = padded_image[y_val][x_val]
         normalized_patch = patch / norm
+
         assert patch.shape == (16,16), 'patch shape is not 16x16'
         patches.append(patch)
 
-    patch_arr = np.array(patches)
-
-    return patch_arr
+    return np.array(patches)
 
 def get_patch_bounds(y_val, x_val, feature_width):
     # returns in numpy row, col order

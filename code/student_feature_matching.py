@@ -1,6 +1,5 @@
 import numpy as np
 import random
-import pdb
 
 def match_features(features1, features2, x1, y1, x2, y2):
     """
@@ -37,14 +36,7 @@ def match_features(features1, features2, x1, y1, x2, y2):
     """
 
     distance_arr = feature_distances(features1, features2)
-
-    fv1_matches, fv1_confidences = match_along_row(distance_arr)
-    distance_arr_t = np.transpose(distance_arr)
-    fv2_matches, fv2_confidences = match_along_row(distance_arr_t, axis=1)
-
-    match_candidates = np.concatenate((fv1_matches, fv2_matches))
-    confidence_candidates = np.concatenate((fv1_confidences, fv2_confidences))
-
+    match_candidates, confidence_candidates = match_along_row(distance_arr)
     top_indices = get_top_sorted_indices(confidence_candidates, top=100)
 
     return match_candidates[top_indices,], confidence_candidates[top_indices,]
@@ -57,18 +49,17 @@ def match_along_row(distance_arr, axis=0):
 
     for i, row in enumerate(distance_arr):
         rankings = np.argsort(row)
-        nn1_index = rankings[0]
-        nn2_index = rankings[1]
-        if axis == 0:
-            fv1_index = i
-            fv2_index = nn1_index
-            matches.append([fv1_index, fv2_index])
-            confidences.append(row[nn1_index] / row[nn2_index])
-        elif axis == 1:
+        nn1_index, nn2_index = rankings[0:2]
+
+        if axis == 1:
             fv1_index = nn1_index
             fv2_index = i
-            matches.append([fv1_index, fv2_index])
-            confidences.append(row[nn1_index] / row[nn2_index])
+        else:
+            fv1_index = i
+            fv2_index = nn1_index
+
+        matches.append([fv1_index, fv2_index])
+        confidences.append(row[nn1_index] / row[nn2_index])
 
     return np.array(matches, dtype=int), np.array(confidences, dtype=float)
 
@@ -79,7 +70,6 @@ def get_top_sorted_indices(confidence_candidates, top=100):
 def feature_distances(fv1, fv2):
     # (fv1_k x fv2_k) array of euclidean distances
     rows = [get_distances_for_patch(fv1_patch, fv2) for fv1_patch in fv1]
-
     return np.array(rows, dtype=float)
 
 def get_distances_for_patch(fv1_patch, fv2):
