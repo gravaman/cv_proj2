@@ -1,5 +1,6 @@
 import numpy as np
 import random
+import pdb
 
 def match_features(features1, features2, x1, y1, x2, y2):
     """
@@ -34,15 +35,63 @@ def match_features(features1, features2, x1, y1, x2, y2):
 
     'matches' and 'confidences' can be empty e.g. (0x2) and (0x1)
     """
-    matches = random_features(features1, features2)
-    confidences = np.empty([0,1])
 
+    distance_arr = feature_distances(features1, features2)
 
-    # calculate euclidean distance of all 16x16 dimensions of each feature with each other feature
-    # find ratio of feature's distance to nearest and next nearest neighbor (confidence)
-    # return only the top 100 most confident matches
+    fv1_matches, fv1_confidences = match_along_row(distance_arr)
+    distance_arr_t = np.transpose(distance_arr)
+    fv2_matches, fv2_confidences = match_along_row(distance_arr_t, axis=1)
 
-    return matches, confidences
+    match_candidates = np.concatenate((fv1_matches, fv2_matches))
+    confidence_candidates = np.concatenate((fv1_confidences, fv2_confidences))
+
+    top_indices = get_top_sorted_indices(confidence_candidates, top=100)
+
+    return match_candidates[top_indices,], confidence_candidates[top_indices,]
+
+def match_along_row(distance_arr, axis=0):
+    # returns match locations (int axis=0, int axis=1) and confidences (float) across rows
+    # row_dims, _ = distance_arr.shape
+    matches = [] # np.empty([row_dims, 2], int)
+    confidences = [] # np.empty([row_dims, 1], float)
+
+    for i, row in enumerate(distance_arr):
+        rankings = np.argsort(row)
+        nn1_index = rankings[0]
+        nn2_index = rankings[1]
+        if axis == 0:
+            fv1_index = i
+            fv2_index = nn1_index
+            matches.append([fv1_index, fv2_index])
+            confidences.append(row[nn1_index] / row[nn2_index])
+        elif axis == 1:
+            fv1_index = nn1_index
+            fv2_index = i
+            matches.append([fv1_index, fv2_index])
+            confidences.append(row[nn1_index] / row[nn2_index])
+
+    return np.array(matches, dtype=int), np.array(confidences, dtype=float)
+
+def get_top_sorted_indices(confidence_candidates, top=100):
+    sorted_indices = np.argsort(confidence_candidates)
+    return sorted_indices[:top]
+
+def feature_distances(fv1, fv2):
+    # (fv1_k x fv2_k) array of euclidean distances
+    rows = [get_distances_for_patch(fv1_patch, fv2) for fv1_patch in fv1]
+
+    return np.array(rows, dtype=float)
+
+def get_distances_for_patch(fv1_patch, fv2):
+    # returns (,k) array of euclidean distances between given fv1_patch and each fv2 patch
+    return [euclidean_distance(fv1_patch, fv2_patch) for fv2_patch in fv2]
+
+def euclidean_distance(fv1, fv2):
+    # sum of element wise square root of squared difference
+    # returns floating point scalar
+    sqr = np.square(fv1 - fv2)
+    sqrt = np.sqrt(sqr)
+    return np.sum(sqrt)
 
 def random_features(features1, features2):
     max_k = min(len(features1), len(features2))
@@ -61,47 +110,3 @@ def random_features(features1, features2):
     assert rando_arr.shape == (k, 2), 'random feature matches must be shape (k, 2)'
 
     return rando_arr
-
-def feature_distances(features):
-    dimensionality = len(features)
-    distances = np.zeros((dimensionality, dimensionality))
-
-    rows = [get_distance_row(features, dim, dimensionality) for dim in np.arange(dimensionality-1)]
-    upper_triangle = np.array(rows)
-
-    # reflect upper triangle along diagonal
-    # transpose upper to get lower
-    lower_triangle = np.transpose(upper_triangle)
-
-    # zero out the diagonal to prevent double counting
-    lower_triangle = np.tril(lower_triangle, k=-1)
-
-    # add to get symmetrical distance matrix
-    return upper_triangle + lower_triangle
-
-def sorted_neighbors(distance_arr):
-    # returns matrix of neighbor indices sorted by euclidean distance (ascending)
-    # col1 is the sorted feature index (distance == 0)
-    neighbor_ranks = [np.argsort(row) for row in distance_arr]
-    return np.array(neighbor_ranks)
-
-def get_distance_row(features, dim, dimensionality):
-    # returns (k,) array with leading zeros
-    # get fwd range
-    fwd_indices = np.arange(dim + 1, dimensionality)
-
-    # leading zeros
-    entry_distances = np.zeros(dimension)
-
-    # get distance from current dimension for each fwd index
-    current_feature = features[dim]
-    fwd_distances = [euclidean_distance(current_feature, features[fwd_index]) for fwd_index in fwd_indices]
-
-    return np.concatenate((entry_distances, fwd_distances), axis=None)
-
-def euclidean_distance(fv1, fv2):
-    # sum of element wise square root of squared difference
-    # returns floating point scalar
-    sqr = np.square(fv1 - fv2)
-    sqrt = np.sqrt(sqr)
-    return np.sum(sqrt)

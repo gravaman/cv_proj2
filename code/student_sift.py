@@ -1,6 +1,7 @@
 import numpy as np
 import cv2
 import math
+import pdb
 
 def get_features(image, x, y, feature_width, scales=None):
     """
@@ -60,9 +61,11 @@ def get_features(image, x, y, feature_width, scales=None):
     """
     assert image.ndim == 2, 'Image must be grayscale'
 
-    padded_image = pad_image(image, feature_width)
-    coordinates = yx_coordinates(y, x, feature_width)
-    fvs = get_local_patches(padded_image, coordinates, feature_width)
+    # ignore padding for now
+    # padded_image = pad_image(image, feature_width)
+    coordinates = xy_coordinates(x, y)
+    # fvs = get_local_patches(padded_image, coordinates, feature_width)
+    fvs = get_local_patches(image, coordinates, feature_width)
 
     return fvs
 
@@ -79,29 +82,43 @@ def get_pad_size(feature_width):
     assert feature_width % 2 == 0, 'feature width must be even'
     return math.trunc(feature_width / 2)
 
-def yx_coordinates(y_vals, x_vals, feature_width):
-    # buffer values and return (y, x)
-    assert len(y_vals) == len(x_vals), 'y and x location values must be balanced'
+def xy_coordinates(x_vals, y_vals, pad_size=0):
+    # buffer values and return (x, y)
+    assert len(x_vals) == len(y_vals), 'y and x location values must be balanced'
 
-    flat_y_vals = y_vals.flatten()
     flat_x_vals = x_vals.flatten()
+    flat_y_vals = y_vals.flatten()
 
-    pad_size = get_pad_size(feature_width)
-    return [(int(round(flat_y_vals[index]) + pad_size), int(round(x_val) + pad_size)) for index, x_val in enumerate(flat_x_vals)]
+    # pad_size = get_pad_size(feature_width)
+    x_vals_round = [int(round(x_val)) for x_val in flat_x_vals]
+    y_vals_round = [int(round(y_val)) for y_val in flat_y_vals]
+
+    return (x_vals_round, y_vals_round)
+    # return [(int(round(x_val) + pad_size), int(round(flat_y_vals[index]) + pad_size)) for index, x_val in enumerate(flat_x_vals)]
 
 def get_local_patches(padded_image, pixel_coordinates, feature_width):
     patches = []
-    for (y_val, x_val) in pixel_coordinates:
-        (y_entry, y_exit), (x_entry, x_exit) = get_patch_bounds(y_val, x_val, feature_width)
-        patch = padded_image[y_entry:y_exit, x_entry:x_exit]
+    x_coords, y_coords = pixel_coordinates
+    for i, x_val in enumerate(x_coords):
+        y_val = y_coords[i]
+        (y_entry, y_exit), (x_entry, x_exit) = get_patch_bounds(y_val, x_val, feature_width) # numpy row, col order
+        patch = padded_image[y_entry:y_exit, x_entry:x_exit] # numpy row, col order
+        norm = padded_image[y_val][x_val]
+        normalized_patch = patch / norm
+        assert patch.shape == (16,16), 'patch shape is not 16x16'
         patches.append(patch)
-    return np.array(patches)
+
+    patch_arr = np.array(patches)
+
+    return patch_arr
 
 def get_patch_bounds(y_val, x_val, feature_width):
+    # returns in numpy row, col order
     assert feature_width % 2 == 0, 'feature width must be even'
     entry_buffer = int(feature_width / 2 - 1)
     exit_buffer = int(feature_width / 2 + 1) # need to add bc not inclusive
 
     y_bounds = (y_val - entry_buffer, y_val + exit_buffer)
     x_bounds = (x_val - entry_buffer, x_val + exit_buffer)
+
     return y_bounds, x_bounds
