@@ -60,13 +60,26 @@ def get_features(image, x, y, feature_width, scales=None):
     """
     assert image.ndim == 2, 'Image must be grayscale'
 
-    # ignore padding for now
-    # padded_image = pad_image(image, feature_width)
     coordinates = xy_coordinates(x, y)
-    # fvs = get_local_patches(padded_image, coordinates, feature_width)
-    fvs = get_local_patches(image, coordinates, feature_width)
+    bounded_coordinates = remove_edge_points(image, coordinates, feature_width)
+
+    fvs = get_local_patches(image, bounded_coordinates, feature_width)
 
     return fvs
+
+def remove_edge_points(image, coordinates, feature_width):
+    x_coordinates, y_coordinates = coordinates
+    [x_min, x_max], [y_min, y_max] = image_bounds(image, feature_width)
+
+    bounded_coords = [(x_val, y_val) for x_val, y_val in zip(x_coordinates, y_coordinates) if (x_min <= x_val <= x_max) and (y_min <= y_val <= y_max)]
+    x_coords = [x_val for x_val, _ in bounded_coords]
+    y_coords = [y_val for _, y_val in bounded_coords]
+    return (x_coords, y_coords)
+
+def image_bounds(image, feature_width):
+    # takes np image and returns [x_min, x_max], [y_min, y_max]
+    image_y_max, image_x_max = image.shape
+    return [feature_width, image_x_max - feature_width], [feature_width, image_y_max - feature_width]
 
 def pad_image(image, feature_width):
     # returns padded image copy allowing feature detection near edges
@@ -97,18 +110,19 @@ def xy_coordinates(x_vals, y_vals, pad_size=0):
 def get_local_patches(padded_image, pixel_coordinates, feature_width):
     patches = []
     x_coords, y_coords = pixel_coordinates
-    for i, x_val in enumerate(x_coords):
-        y_val = y_coords[i]
+    for x_val, y_val in zip(x_coords, y_coords):
         (y_entry, y_exit), (x_entry, x_exit) = get_patch_bounds(y_val, x_val, feature_width) # numpy row, col order
         patch = padded_image[y_entry:y_exit, x_entry:x_exit] # numpy row, col order
+        normal_patch = normalize_patch(patch)
 
-        norm = padded_image[y_val][x_val]
-        normalized_patch = patch / norm
-
-        assert patch.shape == (16,16), 'patch shape is not 16x16'
-        patches.append(patch)
+        assert normal_patch.shape == (16,16), 'patch shape is not 16x16'
+        patches.append(normal_patch)
 
     return np.array(patches)
+
+def normalize_patch(patch):
+    magnitude = np.linalg.norm(patch)
+    return patch / magnitude
 
 def get_patch_bounds(y_val, x_val, feature_width):
     # returns in numpy row, col order
